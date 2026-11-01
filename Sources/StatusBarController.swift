@@ -17,6 +17,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
     private let autoUnlockMenu = NSMenu(title: "自动解锁")
     private let remoteItem = NSMenuItem(title: "允许远程输入（UU 远程）", action: nil, keyEquivalent: "")
     private let hotkeyItem = NSMenuItem(title: "全局快捷键 ⇧⌘K", action: nil, keyEquivalent: "")
+    private let loginItem = NSMenuItem(title: "开机自启", action: nil, keyEquivalent: "")
     private let trackpadItem = NSMenuItem(title: "同时锁定触控板（即将支持）", action: nil, keyEquivalent: "")
     private let permissionItem = NSMenuItem(title: "⚠︎ 需要辅助功能权限…", action: nil, keyEquivalent: "")
     private let diagnosticsItem = NSMenuItem(title: "诊断日志…", action: nil, keyEquivalent: "")
@@ -82,6 +83,10 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         hotkeyItem.action = #selector(toggleHotkey)
         menu.addItem(hotkeyItem)
 
+        loginItem.target = self
+        loginItem.action = #selector(toggleLoginItem)
+        menu.addItem(loginItem)
+
         trackpadItem.isEnabled = false
         menu.addItem(trackpadItem)
 
@@ -127,6 +132,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         }
         remoteItem.state = preferences.allowRemoteInput ? .on : .off
         hotkeyItem.state = preferences.hotkeyEnabled ? .on : .off
+        refreshLoginItem()
         permissionItem.isHidden = gate.isTrusted
 
         statusItem.button?.toolTip = statusLineText()
@@ -200,6 +206,34 @@ final class StatusBarController: NSObject, NSMenuDelegate {
     @objc private func toggleHotkey() {
         preferences.hotkeyEnabled.toggle()
         hotkey.setEnabled(preferences.hotkeyEnabled)
+        refresh()
+    }
+
+    private func refreshLoginItem() {
+        switch LoginItem.state {
+        case .enabled:
+            loginItem.title = "开机自启"
+            loginItem.state = .on
+        case .requiresApproval:
+            loginItem.title = "开机自启（需在系统设置里允许）"
+            loginItem.state = .off
+        case .disabled:
+            loginItem.title = "开机自启"
+            loginItem.state = .off
+        }
+    }
+
+    @objc private func toggleLoginItem() {
+        if LoginItem.state == .requiresApproval {
+            LoginItem.openSystemSettings()
+            return
+        }
+        let enable = LoginItem.state != .enabled
+        if let error = LoginItem.setEnabled(enable) {
+            diagnostics.note("开机自启设置失败：\(error)")
+        } else {
+            diagnostics.note(enable ? "已开启开机自启" : "已关闭开机自启")
+        }
         refresh()
     }
 

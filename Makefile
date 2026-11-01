@@ -77,10 +77,16 @@ restart: bundle
 	@touch $(APP)
 	@open $(APP)
 
+# 装到 /Applications 后就不用再 make run；开机自启用菜单里的「开机自启」
+# （SMAppService 注册的是主 App，所以要先把 App 放到固定位置）。
 install: bundle
+	@-pkill -f "$(APP_NAME).app/Contents/MacOS/$(APP_NAME)" 2>/dev/null || true
+	@sleep 0.3
 	@rm -rf /Applications/$(APP_NAME).app
 	@cp -R $(APP) /Applications/
-	@echo "✅ 已安装到 /Applications/$(APP_NAME).app"
+	@echo "✅ 已安装：/Applications/$(APP_NAME).app"
+	@echo "   打开：open -a $(APP_NAME)（或聚焦搜索 KeyMute）"
+	@echo "   开机自启：菜单栏图标 → 开机自启"
 
 clean:
 	@rm -rf $(BUILD_DIR)
